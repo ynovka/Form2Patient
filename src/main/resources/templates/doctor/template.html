@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru"
+      th:fragment="layout (title, content)">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="#{doctor.template.page.title}">Medical Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+    <meta name="theme-color" content="#3B82F6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+    <style>
+        body { margin: 0; }
+
+        @media (hover: none) and (pointer: coarse) {
+            .nav-item {
+                min-height: 44px;
+                -webkit-tap-highlight-color: transparent;
+            }
+        }
+
+        html, body {
+            overflow-x: hidden;
+        }
+
+        .transition-optimized {
+            will-change: transform, opacity;
+            transform: translateZ(0);
+        }
+    </style>
+</head>
+<body class="min-h-screen w-full bg-gray-50 flex flex-col items-center font-sans">
+<nav class="w-full py-3 sm:py-4 box-border bg-white shadow-sm lg:shadow-none">
+    <div class="flex flex-col w-full max-w-6xl mx-auto 6xl:px-6 px-0 box-content">
+        <div class="flex items-center justify-between lg:hidden mb-3 px-6">
+            <h1 class="text-lg font-semibold text-gray-800" th:text="#{doctor.template.header.title}">Medical Dashboard</h1>
+            <button id="menu-toggle" class="p-2 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" th:attr="aria-label=#{doctor.template.menu.toggle}">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div id="nav-menu" class="hidden lg:flex flex-col lg:flex-row lg:items-center lg:justify-between w-full gap-3 lg:gap-0">
+            <ul class="flex flex-col sm:flex-row sm:flex-wrap gap-2 lg:gap-3">
+                <li>
+                    <a href="/doctor" class="nav-item cursor-pointer bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white px-4 py-3 flex items-center justify-center gap-2 text-sm font-medium transition-colors duration-200 transition-optimized">
+                        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                            <path d="M240-200h120v-240h240v240h120v-360L480-740 240-560v360Zm-80 80v-480l320-240 320 240v480H520v-240h-80v240H160Zm320-350Z"/>
+                        </svg>
+                        <span th:text="#{doctor.template.nav.home}">Главная</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/doctor/settings" class="nav-item cursor-pointer bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-4 py-3 flex items-center justify-center gap-2 text-sm font-medium transition-colors duration-200 transition-optimized">
+                        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                            <path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/>
+                        </svg>
+                        <span th:text="#{doctor.template.nav.settings}">Настройки</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/doctor/form/blank/list" class="nav-item cursor-pointer bg-purple-500 hover:bg-purple-600 active:bg-purple-700 text-white px-4 py-3 flex items-center justify-center gap-2 text-sm font-medium transition-colors duration-200 transition-optimized">
+                        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                            <path d="M560-360q17 0 29.5-12.5T602-402q0-17-12.5-29.5T560-444q-17 0-29.5 12.5T518-402q0 17 12.5 29.5T560-360Zm-30-128h60q0-29 6-42.5t28-35.5q30-30 40-48.5t10-43.5q0-45-31.5-73.5T560-760q-41 0-71.5 23T446-676l54 22q9-25 24.5-37.5T560-704q24 0 39 13.5t15 36.5q0 14-8 26.5T578-596q-33 29-40.5 45.5T530-488ZM320-240q-33 0-56.5-23.5T240-320v-480q0-33 23.5-56.5T320-880h480q33 0 56.5 23.5T880-800v480q0 33-23.5 56.5T800-240H320Zm0-80h480v-480H320v480ZM160-80q-33 0-56.5-23.5T80-160v-560h80v560h560v80H160Zm160-720v480-480Z"/>
+                        </svg>
+                        <span class="whitespace-nowrap" th:text="#{doctor.template.nav.blank.forms}">Шаблоны форм</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/doctor/form/completed/list" class="nav-item cursor-pointer bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white px-4 py-3 flex items-center justify-center gap-2 text-sm font-medium transition-colors duration-200 transition-optimized">
+                        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                            <path d="M320-280q17 0 28.5-11.5T360-320q0-17-11.5-28.5T320-360q-17 0-28.5 11.5T280-320q0 17 11.5 28.5T320-280Zm0-160q17 0 28.5-11.5T360-480q0-17-11.5-28.5T320-520q-17 0-28.5 11.5T280-480q0 17 11.5 28.5T320-440Zm0-160q17 0 28.5-11.5T360-640q0-17-11.5-28.5T320-680q-17 0-28.5 11.5T280-640q0 17 11.5 28.5T320-600Zm120 320h240v-80H440v80Zm0-160h240v-80H440v80Zm0-160h240v-80H440v80ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z"/>
+                        </svg>
+                        <span class="whitespace-nowrap" th:text="#{doctor.template.nav.completed.forms}">Заполненные формы</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="mt-3 lg:mt-0">
+                <a href="/" class="nav-item cursor-pointer bg-red-500 hover:bg-red-600 active:bg-red-700 text-white px-4 py-3 flex items-center justify-center gap-2 text-sm font-medium transition-colors duration-200 lg:transition-optimized">
+                    <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                        <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/>
+                    </svg>
+                    <span th:text="#{doctor.template.nav.logout}">Выйти</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<main th:replace="${content}" class="w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 flex-1 box-border mx-auto"></main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const menuToggle = document.getElementById('menu-toggle');
+        const navMenu = document.getElementById('nav-menu');
+
+        if (menuToggle && navMenu) {
+            menuToggle.addEventListener('click', function() {
+                navMenu.classList.toggle('hidden');
+                navMenu.classList.toggle('flex');
+            });
+
+            document.addEventListener('click', function(event) {
+                if (!menuToggle.contains(event.target) && !navMenu.contains(event.target)) {
+                    navMenu.classList.add('hidden');
+                    navMenu.classList.remove('flex');
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>

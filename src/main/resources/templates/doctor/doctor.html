@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru"
+      th:replace="~{doctor/template :: layout(title=#{doctor.dashboard.page.title}, content=~{::content})}">
+<div th:fragment="content" class="w-full max-w-6xl mx-auto px-0 py-6 flex-1 6xl:box-content">
+    <div class="bg-white border border-gray-200 min-h-[60vh] shadow-sm">
+        <div class="px-4 sm:px-8 py-6 border-b border-gray-200">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800" th:text="#{doctor.dashboard.title}">Панель управления врача</h1>
+            <p class="text-gray-600 mt-2 text-sm sm:text-base" th:text="#{doctor.dashboard.subtitle}">Добро пожаловать в систему управления медицинскими формами</p>
+        </div>
+
+        <div class="px-4 sm:px-8 py-6">
+            <h2 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4 sm:mb-6" th:text="#{doctor.dashboard.recent.forms.title}">Последние заполненные формы</h2>
+            <div th:if="${#lists.isEmpty(last_completed_forms)}" class="flex flex-col items-center justify-center py-20 text-center">
+                <div class="mb-8">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="80px" viewBox="0 -960 960 960" width="80px" class="mx-auto fill-gray-700">
+                        <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h168q13-36 43.5-58t68.5-22q38 0 68.5 22t43.5 58h168q33 0 56.5 23.5T840-760v268q-19-9-39-15.5t-41-9.5v-243H200v560h242q3 22 9.5 42t15.5 38H200Zm0-120v40-560 243-3 280Zm80-40h163q3-21 9.5-41t14.5-39H280v80Zm0-160h244q32-30 71.5-50t84.5-27v-3H280v80Zm0-160h400v-80H280v80Zm200-190q13 0 21.5-8.5T510-820q0-13-8.5-21.5T480-850q-13 0-21.5 8.5T450-820q0 13 8.5 21.5T480-790ZM720-40q-83 0-141.5-58.5T520-240q0-83 58.5-141.5T720-440q83 0 141.5 58.5T920-240q0 83-58.5 141.5T720-40Zm-20-80h40v-100h100v-40H740v-100h-40v100H600v40h100v100Z"/>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4" th:text="#{doctor.dashboard.empty.message}">Заполненных анкет нету</h2>
+            </div>
+
+            <div th:if="${!#lists.isEmpty(last_completed_forms)}" class="space-y-4">
+                <div th:each="completed_form : ${last_completed_forms}"
+                     class="bg-white border border-gray-200 p-6 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+                     th:attr="data-href='/doctor/form/completed/' + ${completed_form.filename}">
+
+                    <div>
+                        <h4 class="font-medium text-gray-800 text-base sm:text-lg" th:text="${completed_form.templateTitle}">[[#{doctor.dashboard.form.title.placeholder}]]</h4>
+                        <p class="text-sm text-gray-600"
+                           th:text="${#strings.length(completed_form.answers[0].value) >= 30
+                              ? completed_form.answers[0].value.substring(0, 30)
+                              : completed_form.answers[0].value}"></p>
+                        <p class="text-sm text-gray-600" th:text="${completed_form.getFormattedDate()}">[[#{doctor.dashboard.form.date.placeholder}]]</p>
+                    </div>
+                </div>
+                <script>
+                    document.addEventListener("DOMContentLoaded", function () {
+                        document.querySelectorAll('[data-href]').forEach(el => {
+                            el.addEventListener('click', () => {
+                                window.location.href = el.dataset.href;
+                            });
+                        });
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
+</div>
+</html>

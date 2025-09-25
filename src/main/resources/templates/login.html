@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{login.page.title}">Авторизация</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+<div class="bg-white border border-gray-200 shadow-sm w-full max-w-md">
+    <div class="px-4 sm:px-8 py-6 border-b border-gray-200">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center" th:text="#{login.title}">Авторизация</h1>
+    </div>
+
+    <div class="px-4 sm:px-8 py-6">
+        <div id="error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 mb-4 sm:mb-6">
+            <div class="flex items-start">
+                <span class="text-xl mr-2 flex-shrink-0">⚠️</span>
+                <span id="errorText" class="text-sm sm:text-base"></span>
+            </div>
+        </div>
+
+        <form id="loginForm" class="space-y-4 sm:space-y-6">
+            <input type="hidden" id="type" th:value="${type}">
+            <input type="hidden" id="returnUrl" th:value="${returnUrl}">
+
+            <div class="space-y-2">
+                <label for="password" class="block text-sm sm:text-base font-medium text-gray-700" th:text="#{login.password.label}">
+                    Пароль:
+                </label>
+                <input type="password"
+                       id="password"
+                       name="password"
+                       class="w-full border-2 border-gray-300 px-3 sm:px-4 py-3 text-base focus:outline-none focus:border-blue-500 transition-colors duration-200 touch-manipulation"
+                       required
+                       autocomplete="off"
+                       th:placeholder="#{login.password.placeholder}">
+            </div>
+
+            <button type="submit"
+                    id="loginBtn"
+                    class="w-full bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white px-6 py-3 sm:py-4 text-base sm:text-lg font-medium transition-colors duration-200 cursor-pointer touch-manipulation"
+                    th:text="#{login.button.submit}">
+                Войти
+            </button>
+        </form>
+
+        <div class="text-center mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
+            <a href="/"
+               class="text-blue-600 hover:text-blue-700 active:text-blue-800 font-medium text-sm sm:text-base transition-colors duration-200 touch-manipulation"
+               th:text="#{login.back.home}">
+                ← Вернуться на главную
+            </a>
+        </div>
+    </div>
+</div>
+<script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        const errorDiv = document.getElementById('error');
+        const loginForm = document.getElementById('loginForm');
+        const passwordInput = document.getElementById('password');
+        const returnUrl = document.getElementById('returnUrl').value;
+
+        var messages = {
+            passwordRequired: [[#{login.error.password.required}]],
+        loginError: [[#{login.error.generic}]],
+        requestError: [[#{login.error.request}]]
+    };
+
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const password = passwordInput.value;
+            const type = document.getElementById('type').value;
+
+            if (!password) {
+                showError(messages.passwordRequired);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('password', password);
+
+            fetch(`/api/login/${type}`, {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = returnUrl;
+                    } else {
+                        showError(data.error || messages.loginError);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showError(messages.requestError);
+                });
+        });
+
+        function showError(message) {
+            const errorTextElement = document.getElementById('errorText');
+            errorTextElement.textContent = message;
+            errorDiv.classList.remove('hidden');
+
+            setTimeout(() => {
+                errorDiv.classList.add('hidden');
+            }, 5000);
+        }
+    });
+</script>
+</body>
+</html>

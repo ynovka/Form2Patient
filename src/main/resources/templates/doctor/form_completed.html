@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru"
+      th:replace="~{doctor/template :: layout(title=#{form.result.page.title}, content=~{::content})}">
+<div th:fragment="content" class="w-full max-w-4xl lg:max-w-6xl mx-auto px-0 py-4 sm:py-6 lg:py-8 flex-1">
+
+    <div class="bg-white border-2 border-gray-300 mb-4 sm:mb-6  overflow-hidden">
+        <div class="bg-blue-600 text-white px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
+            <div class="min-w-0 flex-1">
+                <h1 id="form-title" class="text-xl sm:text-2xl font-bold truncate" th:text="${blank_form.title}">Название формы</h1>
+                <p class="text-blue-100 mt-1 text-sm sm:text-base">
+                    <span th:text="#{form.result.completed.label}">Заполнено:</span> <span class="font-medium" id="completed-time" th:text="${completed_form.getFormattedDate()}">Дата заполнения</span>
+                </p>
+            </div>
+            <button type="button" id="export-btn" onclick="exportResponse()"
+                    class="w-full sm:w-auto bg-blue-500 hover:bg-blue-400 cursor-pointer active:bg-blue-300 border-2 border-blue-300 text-white px-4 py-3 sm:py-2 font-medium transition-colors duration-200 touch-manipulation"
+                    th:text="#{form.result.export.button}">
+                📋 Скопировать
+            </button>
+        </div>
+    </div>
+
+    <div id="error-message" class="hidden bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 mb-4 sm:mb-6">
+        <div class="flex items-start sm:items-center">
+            <span class="text-xl mr-2 flex-shrink-0">⚠️</span>
+            <span id="error-text" class="text-sm sm:text-base"></span>
+        </div>
+    </div>
+
+    <div id="success-message" class="hidden bg-green-100 border-2 border-green-400 text-green-700 px-4 py-3 mb-4 sm:mb-6">
+        <div class="flex items-start sm:items-center">
+            <span class="text-xl mr-2 flex-shrink-0">✅</span>
+            <span id="success-text" class="text-sm sm:text-base" th:text="#{form.result.success.default}">Сообщение</span>
+        </div>
+    </div>
+
+    <div id="loading-indicator" class="text-center py-8 sm:py-12">
+        <div class="text-gray-500 text-base sm:text-lg" th:text="#{form.result.loading}">⏳ Загрузка формы...</div>
+    </div>
+
+    <form id="completed-form" class="space-y-4 sm:space-y-6">
+        <div id="form-sections" class="space-y-4 sm:space-y-6">
+        </div>
+
+        <div class="bg-gray-50 border-2 border-gray-300 px-4 sm:px-6 py-4">
+            <div class="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:justify-between sm:items-center">
+                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                    <button type="button" onclick="location.href=`/doctor/form/completed/list`"
+                            class="w-full sm:w-auto cursor-pointer bg-gray-500 hover:bg-gray-600 active:bg-gray-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 touch-manipulation"
+                            th:text="#{form.result.button.back}">
+                        ← Назад
+                    </button>
+                    <button type="button" id="delete-btn" onclick="showDeleteConfirmation()"
+                            class="w-full sm:w-auto bg-red-500 cursor-pointer hover:bg-red-600 active:bg-red-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 touch-manipulation"
+                            th:text="#{form.result.button.delete}">
+                        🗑️ Удалить анкету
+                    </button>
+                </div>
+                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                    <button type="button" id="edit-toggle-btn"
+                            class="w-full sm:w-auto bg-yellow-500 cursor-pointer hover:bg-yellow-600 active:bg-yellow-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 touch-manipulation"
+                            th:text="#{form.result.button.edit}">
+                        ✏️ Редактировать
+                    </button>
+                    <button type="submit" id="save-btn" style="display: none;"
+                            class="w-full sm:w-auto bg-gray-400 cursor-not-allowed text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200"
+                            th:text="#{form.result.button.save}">
+                        💾 Сохранить изменения
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div id="exportModal" style="display: none;" class="fixed inset-0 bg-black/25 z-50 p-4">
+        <div class="flex items-center justify-center min-h-full">
+            <div class="bg-white border-2 border-gray-300 w-full max-w-4xl max-h-[90vh] shadow-2xl overflow-hidden">
+                <div class="bg-blue-600 text-white px-4 sm:px-6 py-4 border-b-2 border-gray-300">
+                    <h2 class="text-lg sm:text-xl font-bold" th:text="#{form.result.export.modal.title}">Экспорт результатов анкеты</h2>
+                </div>
+                <div class="p-4 sm:p-6 flex-1 overflow-y-auto">
+                    <textarea id="exportPreview" readonly
+                              class="w-full h-48 sm:h-64 border-2 border-gray-300 px-3 sm:px-4 py-3 text-sm bg-gray-50 resize-none focus:outline-none">
+                    </textarea>
+                </div>
+                <div class="bg-gray-50 border-t-2 border-gray-300 px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+                    <button type="button" onclick="closeExportModal()"
+                            class="w-full sm:w-auto bg-gray-500 cursor-pointer hover:bg-gray-600 active:bg-gray-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 cursor-pointer touch-manipulation"
+                            th:text="#{form.result.export.modal.close}">
+                        Закрыть
+                    </button>
+                    <button type="button" onclick="copyToClipboard()"
+                            class="w-full sm:w-auto bg-green-500 cursor-pointer hover:bg-green-600 active:bg-green-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 cursor-pointer touch-manipulation"
+                            th:text="#{form.result.export.modal.copy}">
+                        📋 Скопировать в буфер
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="deleteModal" style="display: none;" class="fixed inset-0 bg-black/25 flex items-center justify-center z-50 p-4">
+        <div class="flex items-center justify-center min-h-full">
+            <div class="bg-white border-2 border-gray-300 w-full max-w-md shadow-2xl overflow-hidden">
+                <div class="bg-red-600 text-white px-4 sm:px-6 py-4 border-b-2 border-gray-300">
+                    <h2 class="text-lg sm:text-xl font-bold" th:text="#{form.result.delete.modal.title}">Подтверждение удаления</h2>
+                </div>
+                <div class="p-4 sm:p-6">
+                    <div class="flex flex-col sm:flex-row sm:items-start">
+                        <span class="text-3xl sm:text-4xl mb-3 sm:mb-0 sm:mr-4 text-center sm:text-left">⚠️</span>
+                        <div class="text-center sm:text-left">
+                            <p class="text-base sm:text-lg font-medium text-gray-800 mb-2" th:text="#{form.result.delete.modal.question}">Удалить анкету?</p>
+                            <p class="text-sm sm:text-base text-gray-600" th:text="#{form.result.delete.modal.warning}">Это действие нельзя отменить. Все данные анкеты будут безвозвратно удалены.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 border-t-2 border-gray-300 px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+                    <button type="button" onclick="closeDeleteModal()"
+                            class="w-full sm:w-auto bg-gray-500 cursor-pointer hover:bg-gray-600 active:bg-gray-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 cursor-pointer touch-manipulation"
+                            th:text="#{form.result.delete.modal.cancel}">
+                        Отмена
+                    </button>
+                    <button type="button" onclick="confirmDelete()" id="confirm-delete-btn"
+                            class="w-full sm:w-auto bg-red-500 cursor-pointer hover:bg-red-600 active:bg-red-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 cursor-pointer touch-manipulation"
+                            th:text="#{form.result.delete.modal.confirm}">
+                        🗑️ Удалить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        window.formData = /*[[${blank_form}]]*/ {};
+        window.completedForm = /*[[${completed_form}]]*/ {};
+        window.filename = /*[[${filename}]]*/ '';
+    </script>
+
+    <script th:inline="javascript">
+        var messages = {
+            editModeView: [[#{form.result.js.edit.view}]],
+        editModeEdit: [[#{form.result.js.edit.edit}]],
+        savingChanges: [[#{form.result.js.saving}]],
+        saveChanges: [[#{form.result.js.save.changes}]],
+        deleting: [[#{form.result.js.deleting}]],
+        deleteButton: [[#{form.result.js.delete.button}]],
+
+        formDataError: [[#{form.result.js.error.form.data}]],
+        initError: [[#{form.result.js.error.init}]],
+        saveError: [[#{form.result.js.error.save}]],
+        exportTemplateError: [[#{form.result.js.error.export.template}]],
+        copyError: [[#{form.result.js.error.copy}]],
+        deleteError: [[#{form.result.js.error.delete}]],
+        requestError: [[#{form.result.js.error.request}]],
+
+        changesSaved: [[#{form.result.js.success.saved}]],
+        copiedToClipboard: [[#{form.result.js.success.copied}]],
+
+        additionalInfoPlaceholder: [[#{form.result.js.placeholder.additional}]],
+        noAnswerPlaceholder: [[#{form.result.js.placeholder.no.answer}]],
+        noTimeDataPlaceholder: [[#{form.result.js.placeholder.no.time}]]
+        };
+
+        class CompletedFormRenderer {
+            constructor() {
+                this.formData = null;
+                this.completedForm = null;
+                this.filename = window.filename || '';
+                this.answers = new Map();
+                this.originalAnswers = new Map();
+                this.isEditMode = false;
+                this.initializeForm();
+            }
+
+            async initializeForm() {
+                try {
+                    if (window.formData && window.completedForm) {
+                        this.formData = window.formData;
+                        this.completedForm = window.completedForm;
+                        this.loadExistingAnswers();
+                        this.renderForm();
+                    } else {
+                        this.showError(messages.formDataError);
+                    }
+                } catch (error) {
+                    this.showError(messages.initError);
+                }
+            }
+
+            loadExistingAnswers() {
+                this.completedForm.answers.forEach(answer => {
+                    this.answers.set(answer.questionId, answer.value);
+                    this.originalAnswers.set(answer.questionId, answer.value);
+                });
+            }
+
+            parseAnswerWithAdditionalText(value) {
+                if (!value) return { mainValues: [], additionalTexts: {} };
+
+                const parts = value.split(', ');
+                const mainValues = [];
+                const additionalTexts = {};
+
+                parts.forEach(part => {
+                    const colonIndex = part.indexOf(': ');
+                    if (colonIndex !== -1) {
+                        const option = part.substring(0, colonIndex);
+                        const additionalText = part.substring(colonIndex + 2);
+                        mainValues.push(option);
+                        additionalTexts[option] = additionalText;
+                    } else {
+                        mainValues.push(part);
+                    }
+                });
+
+                return { mainValues, additionalTexts };
+            }
+
+            formatAnswerWithAdditionalText(mainValue, additionalText) {
+                if (!additionalText || additionalText.trim() === '') {
+                    return mainValue;
+                }
+                const escapedText = additionalText.replace(/:/g, '\\:');
+                return `${mainValue}: ${escapedText}`;
+            }
+
+            renderForm() {
+                if (!this.formData) return this.showError(messages.formDataError);
+
+                document.getElementById('loading-indicator').classList.add('hidden');
+                const form = document.getElementById('completed-form');
+                form.classList.remove('hidden');
+
+                this.renderSections();
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                const form = document.getElementById('completed-form');
+                const editBtn = document.getElementById('edit-toggle-btn');
+
+                editBtn.addEventListener('click', () => this.toggleEditMode());
+                form.addEventListener('submit', (e) => this.handleSave(e));
+
+                form.addEventListener('input', () => this.checkForChanges());
+                form.addEventListener('change', () => this.checkForChanges());
+            }
+
+            toggleEditMode() {
+                this.isEditMode = !this.isEditMode;
+                const editBtn = document.getElementById('edit-toggle-btn');
+                const saveBtn = document.getElementById('save-btn');
+
+                if (this.isEditMode) {
+                    editBtn.textContent = messages.editModeView;
+                    editBtn.className = 'w-full sm:w-auto cursor-pointer bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 touch-manipulation';
+                    saveBtn.style.display = 'block';
+                    this.enableEditing();
+                } else {
+                    editBtn.textContent = messages.editModeEdit;
+                    editBtn.className = 'w-full sm:w-auto cursor-pointer bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 touch-manipulation';
+                    saveBtn.style.display = 'none';
+
+                    this.answers = new Map(this.originalAnswers);
+                    this.renderSections();
+                    this.disableEditing();
+                }
+            }
+
+            enableEditing() {
+                const allInputs = document.querySelectorAll('input, textarea, select');
+                allInputs.forEach(input => {
+                    input.disabled = false;
+                    input.classList.remove('bg-gray-100', 'text-gray-600');
+                    input.classList.add('bg-white');
+                });
+            }
+
+            disableEditing() {
+                const allInputs = document.querySelectorAll('input, textarea, select');
+                allInputs.forEach(input => {
+                    input.disabled = true;
+                    input.classList.add('bg-gray-100', 'text-gray-600');
+                    input.classList.remove('bg-white');
+                });
+            }
+
+            checkForChanges() {
+                if (!this.isEditMode) return;
+
+                const saveBtn = document.getElementById('save-btn');
+                let hasChanges = false;
+
+                for (let [questionId, currentValue] of this.answers) {
+                    const originalValue = this.originalAnswers.get(questionId);
+                    if (currentValue !== originalValue) {
+                        hasChanges = true;
+                        break;
+                    }
+                }
+
+                if (hasChanges) {
+                    saveBtn.disabled = false;
+                    saveBtn.className = 'w-full sm:w-auto bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors cursor-pointer duration-200';
+                } else {
+                    saveBtn.disabled = true;
+                    saveBtn.className = 'w-full sm:w-auto bg-gray-400 cursor-not-allowed text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200';
+                }
+            }
+
+            renderSections() {
+                const container = document.getElementById('form-sections');
+                container.innerHTML = '';
+                this.formData.sections.forEach(section => {
+                    container.appendChild(this.createSection(section));
+                });
+
+                if (!this.isEditMode) {
+                    this.disableEditing();
+                }
+            }
+
+            createSection(section) {
+                const div = document.createElement('div');
+                div.className = 'bg-white border-2 border-gray-300 overflow-hidden';
+
+                const header = document.createElement('div');
+                header.className = 'bg-gray-100 border-b-2 border-gray-300 px-4 sm:px-6 py-4';
+                const h2 = document.createElement('h2');
+                h2.className = 'text-lg sm:text-xl font-bold text-gray-800';
+                h2.textContent = section.title;
+                header.appendChild(h2);
+                div.appendChild(header);
+
+                const content = document.createElement('div');
+                content.className = 'p-4 sm:p-6 space-y-6 sm:space-y-8';
+                section.questions.forEach(question => {
+                    content.appendChild(this.createQuestion(question));
+                });
+                div.appendChild(content);
+
+                return div;
+            }
+
+            createQuestion(question) {
+                const div = document.createElement('div');
+                div.className = 'space-y-3 sm:space-y-4';
+
+                const label = document.createElement('label');
+                label.className = 'block text-base sm:text-lg font-medium text-gray-800';
+                label.textContent = question.text;
+                div.appendChild(label);
+
+                const answerElement = this.createAnswerElement(question);
+                div.appendChild(answerElement);
+
+                return div;
+            }
+
+            createAnswerElement(question) {
+                const existingAnswer = this.answers.get(question.id) || '';
+
+                switch (question.type) {
+                    case 'textarea':
+                        return this.createTextarea(question, existingAnswer);
+                    case 'number':
+                        return this.createInput(question, 'number', existingAnswer);
+                    case 'radio':
+                        return this.createRadioGroup(question, existingAnswer);
+                    case 'checkbox':
+                        return this.createCheckboxGroup(question, existingAnswer);
+                    default:
+                        return this.createInput(question, 'text', existingAnswer);
+                }
+            }
+
+            createInput(question, type, value) {
+                const input = document.createElement('input');
+                input.type = type;
+                input.id = `q${question.id}`;
+                input.name = input.id;
+                input.value = value;
+                input.className = 'w-full border-2 border-gray-300 px-3 sm:px-4 py-3 text-base sm:text-lg bg-gray-100 text-gray-600 focus:outline-none focus:border-blue-500 transition-colors duration-200 touch-manipulation';
+
+                input.addEventListener('input', () => {
+                    this.answers.set(question.id, input.value);
+                });
+
+                return input;
+            }
+
+            createTextarea(question, value) {
+                const textarea = document.createElement('textarea');
+                textarea.id = `q${question.id}`;
+                textarea.name = textarea.id;
+                textarea.value = value;
+                textarea.rows = 4;
+                textarea.className = 'w-full border-2 border-gray-300 px-3 sm:px-4 py-3 text-base sm:text-lg bg-gray-100 text-gray-600 focus:outline-none focus:border-blue-500 transition-colors duration-200 resize-vertical touch-manipulation';
+
+                textarea.addEventListener('input', () => {
+                    this.answers.set(question.id, textarea.value);
+                });
+
+                return textarea;
+            }
+
+            createRadioGroup(question, existingValue) {
+                const container = document.createElement('div');
+                container.className = 'space-y-3 sm:space-y-4';
+
+                const { mainValues, additionalTexts } = this.parseAnswerWithAdditionalText(existingValue);
+                const selectedOption = mainValues[0] || '';
+
+                question.options.forEach((option, index) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'space-y-2';
+
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center space-x-3';
+
+                    const input = document.createElement('input');
+                    input.type = 'radio';
+                    input.id = `q${question.id}o${index}`;
+                    input.name = `q${question.id}`;
+                    input.value = option.text;
+                    input.className = 'h-5 w-5 text-blue-600 border-2 border-gray-300 focus:ring-blue-500 touch-manipulation';
+
+                    if (selectedOption === option.text) {
+                        input.checked = true;
+                    }
+
+                    const label = document.createElement('label');
+                    label.htmlFor = input.id;
+                    label.className = 'text-base sm:text-lg text-gray-700 cursor-pointer touch-manipulation';
+                    label.textContent = option.text;
+
+                    row.append(input, label);
+                    wrapper.appendChild(row);
+
+                    let extraInput = null;
+                    if (option.hasAdditionalText) {
+                        extraInput = document.createElement('input');
+                        extraInput.type = 'text';
+                        extraInput.placeholder = messages.additionalInfoPlaceholder;
+                        extraInput.className = 'w-full border-2 border-gray-300 px-3 sm:px-4 py-3 text-base sm:text-lg bg-gray-100 text-gray-600 focus:outline-none focus:border-blue-500 transition-colors duration-200 touch-manipulation';
+                        extraInput.value = additionalTexts[option.text] || '';
+                        extraInput.style.display = input.checked ? 'block' : 'none';
+                        wrapper.appendChild(extraInput);
+
+                        extraInput.addEventListener('input', () => {
+                            if (input.checked) {
+                                const formattedAnswer = this.formatAnswerWithAdditionalText(option.text, extraInput.value);
+                                this.answers.set(question.id, formattedAnswer);
+                            }
+                        });
+                    }
+
+                    input.addEventListener('change', () => {
+                        if (input.checked) {
+                            container.querySelectorAll('input[type="text"]').forEach(field => {
+                                field.style.display = 'none';
+                            });
+
+                            if (option.hasAdditionalText && extraInput) {
+                                extraInput.style.display = 'block';
+                                const formattedAnswer = this.formatAnswerWithAdditionalText(option.text, extraInput.value);
+                                this.answers.set(question.id, formattedAnswer);
+                            } else {
+                                this.answers.set(question.id, option.text);
+                            }
+                        }
+                    });
+
+                    container.appendChild(wrapper);
+                });
+
+                return container;
+            }
+
+            createCheckboxGroup(question, existingValue) {
+                const container = document.createElement('div');
+                container.className = 'space-y-3 sm:space-y-4';
+
+                const { mainValues, additionalTexts } = this.parseAnswerWithAdditionalText(existingValue);
+
+                question.options.forEach((option, index) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'space-y-2';
+
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center space-x-3';
+
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.id = `q${question.id}c${index}`;
+                    input.value = option.text;
+                    input.className = 'h-5 w-5 text-blue-600 border-2 border-gray-300 focus:ring-blue-500 touch-manipulation';
+
+                    if (mainValues.includes(option.text)) {
+                        input.checked = true;
+                    }
+
+                    const label = document.createElement('label');
+                    label.htmlFor = input.id;
+                    label.className = 'text-base sm:text-lg text-gray-700 cursor-pointer touch-manipulation';
+                    label.textContent = option.text;
+
+                    row.append(input, label);
+                    wrapper.appendChild(row);
+
+                    let extraInput = null;
+                    if (option.hasAdditionalText) {
+                        extraInput = document.createElement('input');
+                        extraInput.type = 'text';
+                        extraInput.placeholder = messages.additionalInfoPlaceholder;
+                        extraInput.className = 'w-full border-2 border-gray-300 px-3 sm:px-4 py-3 text-base sm:text-lg bg-gray-100 text-gray-600 focus:outline-none focus:border-blue-500 transition-colors duration-200 touch-manipulation';
+                        extraInput.value = additionalTexts[option.text] || '';
+                        extraInput.style.display = input.checked ? 'block' : 'none';
+                        wrapper.appendChild(extraInput);
+
+                        extraInput.addEventListener('input', () => {
+                            this.updateCheckboxAnswer(question.id, container);
+                        });
+                    }
+
+                    input.addEventListener('change', () => {
+                        if (extraInput) {
+                            extraInput.style.display = input.checked ? 'block' : 'none';
+                            if (!input.checked) {
+                                extraInput.value = '';
+                            }
+                        }
+                        this.updateCheckboxAnswer(question.id, container);
+                    });
+
+                    container.appendChild(wrapper);
+                });
+
+                return container;
+            }
+
+            updateCheckboxAnswer(questionId, container) {
+                const checkedBoxes = container.querySelectorAll('input[type="checkbox"]:checked');
+                if (checkedBoxes.length === 0) {
+                    this.answers.set(questionId, '');
+                    return;
+                }
+
+                const formattedValues = [];
+                checkedBoxes.forEach(checkbox => {
+                    const wrapper = checkbox.closest('.space-y-2');
+                    const extraInput = wrapper.querySelector('input[type="text"]');
+
+                    if (extraInput && extraInput.value.trim()) {
+                        const formattedAnswer = this.formatAnswerWithAdditionalText(checkbox.value, extraInput.value);
+                        formattedValues.push(formattedAnswer);
+                    } else {
+                        formattedValues.push(checkbox.value);
+                    }
+                });
+
+                this.answers.set(questionId, formattedValues.join(', '));
+            }
+
+            async handleSave(e) {
+                e.preventDefault();
+                if (!this.isEditMode) return;
+
+                const saveBtn = document.getElementById('save-btn');
+                const form = document.getElementById('completed-form');
+
+                saveBtn.disabled = true;
+                saveBtn.textContent = messages.savingChanges;
+                saveBtn.className = 'w-full sm:w-auto bg-gray-400 cursor-not-allowed text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200';
+                form.classList.add('opacity-60', 'pointer-events-none');
+
+                try {
+                    const updatedAnswers = Array.from(this.answers.entries()).map(([questionId, value]) => ({
+                        questionId: questionId,
+                        value: value
+                    }));
+
+                    const response = await fetch(`/api/doctor/form/completed/${filename}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(updatedAnswers)
+                    });
+
+                    if (response.ok) {
+                        showSuccess(messages.changesSaved);
+                        this.originalAnswers = new Map(this.answers);
+                        saveBtn.disabled = true;
+                    } else {
+                        throw new Error('Ошибка при сохранении');
+                    }
+                } catch (error) {
+                    this.showError(messages.saveError);
+                } finally {
+                    saveBtn.textContent = messages.saveChanges;
+                    form.classList.remove('opacity-60', 'pointer-events-none');
+                    this.checkForChanges();
+                }
+            }
+
+            showError(message) {
+                showError(message);
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            const errorText = document.getElementById('error-text');
+            const successDiv = document.getElementById('success-message');
+
+            successDiv.classList.add('hidden');
+            errorText.textContent = message;
+            errorDiv.classList.remove('hidden');
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            setTimeout(() => {
+                errorDiv.classList.add('hidden');
+            }, 8000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success-message');
+            const errorDiv = document.getElementById('error-message');
+            const successText = document.getElementById('success-text');
+
+            errorDiv.classList.add('hidden');
+            successText.textContent = message;
+            successDiv.classList.remove('hidden');
+            successDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            setTimeout(() => {
+                successDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Функции экспорта
+        function exportResponse() {
+            if (!window.formData || !window.formData.exportFormBlank) {
+                showError(messages.exportTemplateError);
+                return;
+            }
+
+            const answersMap = {};
+            window.completedForm.answers.forEach(answer => {
+                answersMap[answer.questionId] = answer.value;
+            });
+
+            let exportText = window.formData.exportFormBlank;
+
+            exportText = exportText.replace(/\{\{(\w+)\}\}/g, (match, placeholder) => {
+                if (placeholder === 'timestamp') {
+                    const span = document.getElementById('completed-time');
+                    if (span) {
+                        return span.textContent.trim();
+                    }
+                    return messages.noTimeDataPlaceholder;
+                } else {
+                    const id = parseInt(placeholder);
+                    const answer = answersMap[id];
+
+                    if (!answer) {
+                        return messages.noAnswerPlaceholder;
+                    }
+
+                    if (Array.isArray(answer)) {
+                        if (answer.length === 0) {
+                            return messages.noAnswerPlaceholder;
+                        }
+                        return answer.map((item, index) => `${index + 1}) ${item}`).join('\n');
+                    }
+
+                    if (typeof answer === 'string' && (answer.includes(',') || answer.includes(';'))) {
+                        const parts = answer.split(/[,;]/).map(part => part.trim()).filter(part => part.length > 0);
+                        if (parts.length > 1) {
+                            return parts.map((item, index) => `${index + 1}) ${item}`).join('\n');
+                        }
+                    }
+
+                    return answer;
+                }
+            });
+
+            document.getElementById('exportPreview').textContent = exportText;
+            document.getElementById('exportModal').style.display = 'block';
+            window.exportedText = exportText;
+        }
+
+        function closeExportModal() {
+            document.getElementById('exportModal').style.display = 'none';
+        }
+
+        function copyToClipboard() {
+            if (!window.exportedText) {
+                showError(messages.copyError);
+                return;
+            }
+
+            // Проверяем доступность современного Clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(window.exportedText).then(() => {
+                    showSuccess(messages.copiedToClipboard);
+                }).catch(err => {
+                    console.error('Ошибка копирования через Clipboard API:', err);
+                    fallbackCopyToClipboard();
+                });
+            } else {
+                fallbackCopyToClipboard();
+            }
+            closeExportModal();
+        }
+
+        function fallbackCopyToClipboard() {
+            try {
+                const textArea = document.createElement('textarea');
+                textArea.value = window.exportedText;
+
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                textArea.style.opacity = '0';
+
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+
+                textArea.setSelectionRange(0, textArea.value.length);
+
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+
+                if (successful) {
+                    showSuccess(messages.copiedToClipboard);
+                } else {
+                    throw new Error('execCommand failed');
+                }
+            } catch (err) {
+                console.error('Ошибка копирования:', err);
+            }
+        }
+
+        function showDeleteConfirmation() {
+            document.getElementById('deleteModal').style.display = 'block';
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
+
+        async function confirmDelete() {
+            const confirmBtn = document.getElementById('confirm-delete-btn');
+            const originalText = confirmBtn.textContent;
+
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = messages.deleting;
+            confirmBtn.className = 'w-full sm:w-auto bg-gray-400 cursor-not-allowed text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200';
+
+            try {
+                const response = await fetch(`/api/doctor/form/completed/${window.filename}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success === 'true') {
+                    window.location.href = '/doctor/form/completed/list';
+                } else {
+                    showError(messages.deleteError);
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = originalText;
+                    confirmBtn.className = 'w-full sm:w-auto bg-red-500 hover:bg-red-600 active:bg-red-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 cursor-pointer touch-manipulation';
+                }
+            } catch (error) {
+                showError(messages.requestError);
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = originalText;
+                confirmBtn.className = 'w-full sm:w-auto bg-red-500 hover:bg-red-600 active:bg-red-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 cursor-pointer touch-manipulation';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new CompletedFormRenderer();
+        });
+    </script>
+
+</div>
+</html>

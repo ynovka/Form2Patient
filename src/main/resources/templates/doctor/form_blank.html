@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
+      th:with="pageTitle=${blank_form != null} ? #{form.builder.edit.title} : #{form.builder.create.title}"
+      th:replace="~{doctor/template :: layout(title=${pageTitle}, content=~{::content})}">
+<div th:fragment="content" class="w-full max-w-4xl lg:max-w-6xl mx-auto px-0 py-4 sm:py-6 lg:py-8 flex-1">
+
+    <div class="bg-white border-2 border-gray-300 mb-4 sm:mb-6 overflow-hidden">
+        <div class="bg-blue-600 text-white px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
+            <div class="min-w-0 flex-1">
+                <h1 class="text-xl sm:text-2xl font-bold truncate"
+                    th:with="pageTitle=${blank_form != null} ? #{form.builder.edit.title} : #{form.builder.create.title}"
+                    th:text="${pageTitle}">
+                    Конструктор форм
+                </h1>
+
+                <p class="text-blue-100 mt-1 text-sm sm:text-base" th:text="#{form.builder.subtitle}">
+                    Создание и настройка медицинских анкет
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="error-message" class="hidden bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 mb-4 sm:mb-6">
+        <div class="flex items-start sm:items-center">
+            <span class="text-xl mr-2 flex-shrink-0">⚠️</span>
+            <span id="error-text" class="text-sm sm:text-base"></span>
+        </div>
+    </div>
+
+    <div id="success-message" class="hidden bg-green-100 border-2 border-green-400 text-green-700 px-4 py-3 mb-4 sm:mb-6">
+        <div class="flex items-start sm:items-center">
+            <span class="text-xl mr-2 flex-shrink-0">✅</span>
+            <span id="success-text" class="text-sm sm:text-base" th:text="#{form.builder.success.default}">Сообщение</span>
+        </div>
+    </div>
+
+    <div class="bg-white border-2 border-gray-300 mb-4 sm:mb-6 overflow-hidden">
+        <div class="bg-gray-100 border-b-2 border-gray-300 px-4 sm:px-6 py-4">
+            <h2 class="text-lg sm:text-xl font-bold text-gray-800" th:text="#{form.builder.basic.settings.title}">Основные настройки</h2>
+        </div>
+        <div class="p-4 sm:p-6 space-y-4 sm:space-y-6">
+            <div class="space-y-2">
+                <label class="block text-base sm:text-lg font-medium text-gray-700" th:text="#{form.builder.form.title.label}">Название формы:</label>
+                <input type="text" id="form-title" th:placeholder="#{form.builder.form.title.placeholder}"
+                       class="w-full border-2 border-gray-300 px-3 sm:px-4 py-3 text-base sm:text-lg focus:outline-none focus:border-blue-500 transition-colors duration-200 touch-manipulation"/>
+            </div>
+        </div>
+    </div>
+
+    <div id="form-sections" class="space-y-4 sm:space-y-6">
+        <div id="sections-container" class="space-y-4 sm:space-y-6">
+        </div>
+
+        <div class="text-center">
+            <button type="button" id="add-section"
+                    class="bg-gray-100 hover:bg-gray-200 active:bg-gray-300 border-2 border-gray-300 text-gray-800 px-6 py-3 font-medium transition-colors duration-200 touch-manipulation cursor-pointer"
+                    th:text="#{form.builder.add.section.button}">
+                + Добавить секцию
+            </button>
+        </div>
+    </div>
+
+    <div class="bg-white border-2 border-gray-300 mb-4 mt-18 sm:mb-6 overflow-hidden">
+        <div class="bg-gray-100 border-b-2 border-gray-300 px-4 sm:px-6 py-4">
+            <h2 class="text-lg sm:text-xl font-bold text-gray-800" th:text="#{form.builder.export.template.title}">Шаблон экспорта</h2>
+        </div>
+        <div class="p-4 sm:p-6 space-y-4">
+            <div class="text-gray-500 text-sm sm:text-base" th:text="#{form.builder.export.template.description}">
+                Этот шаблон будет использоваться для экспорта заполненных форм. {{1}}, {{2}} и т.д. будут заменены на ответы соответствующих вопросов.
+            </div>
+            <textarea id="export-template"
+                      class="w-full border-2 border-gray-300 px-3 sm:px-4 py-3 text-base focus:outline-none focus:border-blue-500 transition-colors duration-200 touch-manipulation resize-vertical"
+                      rows="8"
+                      th:placeholder="#{form.builder.export.template.placeholder}"></textarea>
+        </div>
+    </div>
+
+    <div class="bg-gray-50 border-2 border-gray-300 px-4 sm:px-6 py-4">
+        <div class="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:justify-between sm:items-center">
+            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                <button type="button" onclick="location.href='/doctor/form/blank/list'"
+                        class="w-full sm:w-auto cursor-pointer bg-gray-500 hover:bg-gray-600 active:bg-gray-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 touch-manipulation cursor-pointer"
+                        th:text="#{form.builder.button.back}">
+                    ← Назад к списку
+                </button>
+                <button type="button" id="delete-form-btn" th:if="${blank_form != null}" onclick="showDeleteConfirmation()"
+                        class="w-full sm:w-auto bg-red-500 hover:bg-red-600 active:bg-red-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 touch-manipulation cursor-pointer"
+                        th:text="#{form.builder.button.delete}">
+                    🗑️ Удалить форму
+                </button>
+            </div>
+            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                <button type="button" id="save-form" th:if="${blank_form == null}"
+                        class="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 cursor-pointer touch-manipulation cursor-pointer"
+                        th:text="#{form.builder.button.save}">
+                    💾 Сохранить форму
+                </button>
+
+                <button type="button" id="update-form" th:if="${blank_form != null}"
+                        class="w-full sm:w-auto bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 cursor-pointer touch-manipulation cursor-pointer"
+                        th:text="#{form.builder.button.update}">
+                    ✏️ Обновить форму
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="deleteModal" style="display: none;" class="fixed inset-0 bg-black/25 flex items-center justify-center z-50 p-4">
+        <div class="flex items-center justify-center min-h-full">
+            <div class="bg-white border-2 border-gray-300 w-full max-w-md shadow-2xl overflow-hidden">
+                <div class="bg-red-600 text-white px-4 sm:px-6 py-4 border-b-2 border-gray-300">
+                    <h2 class="text-lg sm:text-xl font-bold" th:text="#{form.builder.delete.modal.title}">Подтверждение удаления</h2>
+                </div>
+                <div class="p-4 sm:p-6">
+                    <div class="flex flex-col sm:flex-row sm:items-start">
+                        <span class="text-3xl sm:text-4xl mb-3 sm:mb-0 sm:mr-4 text-center sm:text-left">⚠️</span>
+                        <div class="text-center sm:text-left">
+                            <p class="text-base sm:text-lg font-medium text-gray-800 mb-2" th:text="#{form.builder.delete.modal.question}">Удалить форму?</p>
+                            <p class="text-sm sm:text-base text-gray-600" th:text="#{form.builder.delete.modal.warning}">Это действие нельзя отменить. Шаблон формы будет безвозвратно удален.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 border-t-2 border-gray-300 px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+                    <button type="button" onclick="closeDeleteModal()"
+                            class="w-full sm:w-auto bg-gray-500 cursor-pointer hover:bg-gray-600 active:bg-gray-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 touch-manipulation cursor-pointer"
+                            th:text="#{form.builder.delete.modal.cancel}">
+                        Отмена
+                    </button>
+                    <button type="button" onclick="confirmDelete()" id="confirm-delete-btn"
+                            class="w-full sm:w-auto bg-red-500 cursor-pointer hover:bg-red-600 active:bg-red-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 touch-manipulation cursor-pointer"
+                            th:text="#{form.builder.delete.modal.confirm}">
+                        🗑️ Удалить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        window.editMode = /*[[${blank_form != null}]]*/ false;
+        window.initialFormData = /*[[${blank_form}]]*/ null;
+        window.filename = /*[[${filename}]]*/ '';
+
+        var messages = {
+            sectionLabel: [[#{form.builder.js.section.label}]],
+        sectionPlaceholder: [[#{form.builder.js.section.placeholder}]],
+        addQuestionButton: [[#{form.builder.js.add.question.button}]],
+        questionIdLabel: [[#{form.builder.js.question.id.label}]],
+        questionTextLabel: [[#{form.builder.js.question.text.label}]],
+        questionTextPlaceholder: [[#{form.builder.js.question.text.placeholder}]],
+        questionTypeLabel: [[#{form.builder.js.question.type.label}]],
+        typeText: [[#{form.builder.js.type.text}]],
+        typeNumber: [[#{form.builder.js.type.number}]],
+        typeTextarea: [[#{form.builder.js.type.textarea}]],
+        typeRadio: [[#{form.builder.js.type.radio}]],
+        typeCheckbox: [[#{form.builder.js.type.checkbox}]],
+        optionsLabel: [[#{form.builder.js.options.label}]],
+        addOptionButton: [[#{form.builder.js.add.option.button}]],
+        optionPlaceholder: [[#{form.builder.js.option.placeholder}]],
+        additionalTextLabel: [[#{form.builder.js.additional.text.label}]],
+        deleting: [[#{form.builder.js.deleting}]],
+        deleteError: [[#{form.builder.js.delete.error}]],
+        deleteRequestError: [[#{form.builder.js.delete.request.error}]],
+        saveSuccess: [[#{form.builder.js.save.success}]],
+        updateSuccess: [[#{form.builder.js.update.success}]],
+        validationErrors: [[#{form.builder.js.validation.errors}]],
+        titleRequired: [[#{form.builder.js.title.required}]],
+        sectionRequired: [[#{form.builder.js.section.required}]],
+        sectionTitleRequired: [[#{form.builder.js.section.title.required}]],
+        questionRequired: [[#{form.builder.js.question.required}]],
+        questionTextRequired: [[#{form.builder.js.question.text.required}]],
+        optionsRequired: [[#{form.builder.js.options.required}]],
+        saveError: [[#{form.builder.js.save.error}]],
+        updateError: [[#{form.builder.js.update.error}]],
+        unknownError: [[#{form.builder.js.unknown.error}]]
+        };
+    </script>
+
+    <script>
+        function showDeleteConfirmation() {
+            document.getElementById('deleteModal').style.display = 'block';
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
+
+        async function confirmDelete() {
+            const confirmBtn = document.getElementById('confirm-delete-btn');
+            const originalText = confirmBtn.textContent;
+
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = messages.deleting;
+            confirmBtn.className = 'w-full sm:w-auto bg-gray-400 cursor-not-allowed text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200';
+
+            try {
+                const response = await fetch(`/api/doctor/form/blank/${window.filename}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success === 'true') {
+                    window.location.href = '/doctor/form/blank/list';
+                } else {
+                    formBuilder.showError(messages.deleteError);
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = originalText;
+                    confirmBtn.className = 'w-full sm:w-auto bg-red-500 cursor-pointer hover:bg-red-600 active:bg-red-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 touch-manipulation cursor-pointer';
+                    closeDeleteModal();
+                }
+            } catch (error) {
+                formBuilder.showError(messages.deleteRequestError);
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = originalText;
+                confirmBtn.className = 'w-full sm:w-auto bg-red-500 cursor-pointer hover:bg-red-600 active:bg-red-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 touch-manipulation cursor-pointer';
+                closeDeleteModal();
+            }
+        }
+
+        class FormBuilder {
+            constructor() {
+                this.sectionCounter = 1;
+                this.questionCounter = 1;
+                this.optionCounter = 1;
+                this.debounceTimeout = null;
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.updatePreview();
+
+                if (window.editMode && window.initialFormData) {
+                    this.loadFormData(window.initialFormData);
+                }
+            }
+
+            showError(message) {
+                const errorDiv = document.getElementById('error-message');
+                const errorText = document.getElementById('error-text');
+                const successDiv = document.getElementById('success-message');
+
+                successDiv.classList.add('hidden');
+                errorText.textContent = message;
+                errorDiv.classList.remove('hidden');
+                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                setTimeout(() => {
+                    errorDiv.classList.add('hidden');
+                }, 8000);
+            }
+
+            showSuccess(message) {
+                const successDiv = document.getElementById('success-message');
+                const errorDiv = document.getElementById('error-message');
+                const successText = document.getElementById('success-text');
+
+                errorDiv.classList.add('hidden');
+                successText.textContent = message;
+                successDiv.classList.remove('hidden');
+                successDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                setTimeout(() => {
+                    successDiv.classList.add('hidden');
+                }, 5000);
+            }
+
+            bindEvents() {
+                document.getElementById('add-section').addEventListener('click', () => this.addSection());
+                document.getElementById('form-title').addEventListener('input', () => this.debouncedUpdate());
+                document.getElementById('export-template').addEventListener('input', () => this.debouncedUpdate());
+
+                const saveBtn = document.getElementById('save-form');
+                const updateBtn = document.getElementById('update-form');
+
+                if (saveBtn) {
+                    saveBtn.addEventListener('click', () => this.saveForm());
+                }
+
+                if (updateBtn) {
+                    updateBtn.addEventListener('click', () => this.updateForm());
+                }
+            }
+
+            debouncedUpdate() {
+                clearTimeout(this.debounceTimeout);
+                this.debounceTimeout = setTimeout(() => {
+                    this.updatePreview();
+                }, 300);
+            }
+
+            addSection() {
+                const container = document.getElementById('sections-container');
+                const sectionId = this.sectionCounter++;
+
+                const sectionHtml = `
+                    <div class="bg-white border-2 border-gray-300 overflow-hidden section-item" data-section-id="${sectionId}">
+                        <div class="bg-gray-100 border-b-2 border-gray-300 px-4 sm:px-6 py-4 flex justify-between items-center">
+                            <h3 class="text-lg sm:text-xl font-bold text-gray-800">${messages.sectionLabel} ${sectionId}</h3>
+                            <button type="button" class="text-red-500 text-xl hover:text-red-700 cursor-pointer" onclick="formBuilder.removeSection(${sectionId})">
+                                🗑️
+                            </button>
+                        </div>
+
+                        <div class="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                            <div class="space-y-2">
+                                <label class="block text-base sm:text-lg font-medium text-gray-700">${messages.sectionLabel}:</label>
+                                <input type="text" class="w-full border-2 border-gray-300 px-3 sm:px-4 py-3 text-base sm:text-lg focus:outline-none focus:border-blue-500 transition-colors duration-200 touch-manipulation section-title"
+                                       placeholder="${messages.sectionPlaceholder}"
+                                       oninput="formBuilder.debouncedUpdate()">
+                            </div>
+
+                            <div class="questions-container space-y-4 sm:space-y-6" data-section-id="${sectionId}"></div>
+
+                            <div class="text-center pt-4">
+                                <button type="button" class="bg-gray-100 hover:bg-gray-200 active:bg-gray-300 border-2 border-gray-300 text-gray-800 px-4 py-2 font-medium transition-colors duration-200 touch-manipulation cursor-pointer" onclick="formBuilder.addQuestion(${sectionId})">
+                                    ${messages.addQuestionButton}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.insertAdjacentHTML('beforeend', sectionHtml);
+                this.updatePreview();
+            }
+
+            removeSection(sectionId) {
+                const section = document.querySelector(`[data-section-id="${sectionId}"]`);
+                if (section) {
+                    section.remove();
+                    this.updatePreview();
+                }
+            }
+
+            addQuestion(sectionId) {
+                const container = document.querySelector(`.questions-container[data-section-id="${sectionId}"]`);
+                const questionId = this.questionCounter++;
+
+                const questionHtml = `
+                    <div class="bg-gray-50 border-2 border-gray-200 p-4 sm:p-6 space-y-4 question-item" data-question-id="${questionId}">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-gray-600">${messages.questionIdLabel}: ${questionId}</span>
+                            <button type="button" class="text-red-500 text-lg hover:text-red-700 cursor-pointer" onclick="formBuilder.removeQuestion(${questionId})">
+                                🗑️
+                            </button>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block text-base sm:text-lg font-medium text-gray-700">${messages.questionTextLabel}:</label>
+                            <input type="text"
+                                   class="w-full border-2 border-gray-300 px-3 sm:px-4 py-3 text-base question-text focus:outline-none focus:border-blue-500 transition-colors duration-200 touch-manipulation"
+                                   placeholder="${messages.questionTextPlaceholder}"
+                                   oninput="formBuilder.debouncedUpdate()">
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block text-base sm:text-lg font-medium text-gray-700">${messages.questionTypeLabel}:</label>
+                            <select class="w-full border-2 border-gray-300 px-3 sm:px-4 py-3 text-base question-type focus:outline-none focus:border-blue-500 transition-colors duration-200 touch-manipulation cursor-pointer" onchange="formBuilder.onQuestionTypeChange(${questionId})" oninput="formBuilder.debouncedUpdate()">
+                                <option value="text">${messages.typeText}</option>
+                                <option value="number">${messages.typeNumber}</option>
+                                <option value="textarea">${messages.typeTextarea}</option>
+                                <option value="radio">${messages.typeRadio}</option>
+                                <option value="checkbox">${messages.typeCheckbox}</option>
+                            </select>
+                        </div>
+
+                        <div class="options-container space-y-3" data-question-id="${questionId}" style="display: none;">
+                            <label class="block text-base sm:text-lg font-medium text-gray-700">${messages.optionsLabel}:</label>
+                            <div class="options-list space-y-3"></div>
+                            <div class="text-center">
+                                <button type="button" class="bg-gray-100 hover:bg-gray-200 active:bg-gray-300 border border-gray-300 text-gray-800 px-3 py-2 text-sm font-medium transition-colors duration-200 touch-manipulation cursor-pointer" onclick="formBuilder.addOption(${questionId})">
+                                    ${messages.addOptionButton}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.insertAdjacentHTML('beforeend', questionHtml);
+                this.updateExportTemplate();
+                this.updatePreview();
+            }
+
+            removeQuestion(questionId) {
+                const question = document.querySelector(`[data-question-id="${questionId}"]`);
+                if (question) {
+                    question.remove();
+                    this.updateExportTemplate();
+                    this.updatePreview();
+                }
+            }
+
+            onQuestionTypeChange(questionId) {
+                const questionElement = document.querySelector(`[data-question-id="${questionId}"]`);
+                const typeSelect = questionElement.querySelector('.question-type');
+                const optionsContainer = questionElement.querySelector('.options-container');
+
+                if (typeSelect.value === 'radio' || typeSelect.value === 'checkbox') {
+                    optionsContainer.style.display = 'block';
+                    const optionsList = optionsContainer.querySelector('.options-list');
+                    if (optionsList.children.length === 0) {
+                        this.addOption(questionId);
+                        this.addOption(questionId);
+                    }
+                } else {
+                    optionsContainer.style.display = 'none';
+                }
+
+                this.updatePreview();
+            }
+
+            addOption(questionId) {
+                const optionsList = document.querySelector(`[data-question-id="${questionId}"] .options-list`);
+                const optionId = this.optionCounter++;
+
+                const optionHtml = `
+                    <div class="flex items-center gap-3 option-item bg-white border border-gray-200 p-3" data-option-id="${optionId}">
+                        <input type="text"
+                               class="flex-1 border border-gray-300 px-3 py-2 text-base focus:outline-none focus:border-blue-500 transition-colors duration-200 touch-manipulation option-text"
+                               placeholder="${messages.optionPlaceholder}"
+                               oninput="formBuilder.debouncedUpdate()">
+                        <label class="flex items-center text-sm gap-2 whitespace-nowrap cursor-pointer">
+                            <input type="checkbox"
+                                   class="option-additional h-4 w-4 cursor-pointer"
+                                   onchange="formBuilder.debouncedUpdate()">
+                            ${messages.additionalTextLabel}
+                        </label>
+                        <button type="button" class="text-red-500 text-lg hover:text-red-700 cursor-pointer" onclick="formBuilder.removeOption(${optionId})">
+                            🗑️
+                        </button>
+                    </div>
+                `;
+
+                optionsList.insertAdjacentHTML('beforeend', optionHtml);
+                this.updatePreview();
+            }
+
+            removeOption(optionId) {
+                const option = document.querySelector(`[data-option-id="${optionId}"]`);
+                if (option) {
+                    option.remove();
+                    this.updatePreview();
+                }
+            }
+
+            updateExportTemplate() {
+                const exportTemplateTextarea = document.getElementById('export-template');
+                const currentTemplate = exportTemplateTextarea.value;
+
+                const questionIds = [];
+                document.querySelectorAll('.question-item').forEach(questionElement => {
+                    questionIds.push(parseInt(questionElement.dataset.questionId));
+                });
+
+                questionIds.sort((a, b) => a - b);
+
+                const isAutoGenerated = /^(\{\{\d+\}\}\n?)*$/.test(currentTemplate.trim());
+
+                if (!currentTemplate.trim() || isAutoGenerated) {
+                    const newTemplate = questionIds.map(id => `{{${id}}}`).join('\n');
+                    exportTemplateTextarea.value = newTemplate;
+                } else {
+                    const existingIds = (currentTemplate.match(/\{\{(\d+)\}\}/g) || [])
+                        .map(match => parseInt(match.replace(/[{}]/g, '')));
+
+                    const newIds = questionIds.filter(id => !existingIds.includes(id));
+
+                    if (newIds.length > 0) {
+                        const newPlaceholders = newIds.map(id => `{{${id}}}`).join('\n');
+                        if (currentTemplate.trim()) {
+                            exportTemplateTextarea.value = currentTemplate + '\n' + newPlaceholders;
+                        } else {
+                            exportTemplateTextarea.value = newPlaceholders;
+                        }
+                    }
+                }
+            }
+
+            loadFormData(formData) {
+                document.getElementById('form-title').value = formData.title || '';
+
+                if (formData.exportFormBlank) {
+                    document.getElementById('export-template').value = formData.exportFormBlank;
+                }
+
+                document.getElementById('sections-container').innerHTML = '';
+
+                this.sectionCounter = 1;
+                this.questionCounter = 1;
+                this.optionCounter = 1;
+
+                if (formData.sections && formData.sections.length > 0) {
+                    formData.sections.forEach((section, sectionIndex) => {
+                        this.addSection();
+                        const currentSectionId = this.sectionCounter - 1;
+                        const sectionElement = document.querySelector(`[data-section-id="${currentSectionId}"]`);
+                        const sectionTitleInput = sectionElement.querySelector('.section-title');
+                        sectionTitleInput.value = section.title || '';
+
+                        if (section.questions && section.questions.length > 0) {
+                            section.questions.forEach((question, questionIndex) => {
+                                this.addQuestion(currentSectionId);
+                                const currentQuestionId = this.questionCounter - 1;
+                                const questionElement = document.querySelector(`[data-question-id="${currentQuestionId}"]`);
+
+                                questionElement.querySelector('.question-text').value = question.text || '';
+                                questionElement.querySelector('.question-type').value = question.type || 'text';
+
+                                this.onQuestionTypeChange(currentQuestionId);
+
+                                if (question.options && question.options.length > 0) {
+                                    const optionsContainer = questionElement.querySelector('.options-container');
+                                    const optionsList = optionsContainer.querySelector('.options-list');
+
+                                    optionsList.innerHTML = '';
+
+                                    question.options.forEach(option => {
+                                        this.addOption(currentQuestionId);
+                                        const optionElement = optionsList.lastElementChild;
+
+                                        const optionTextInput = optionElement.querySelector('.option-text');
+                                        optionTextInput.value = option.text || '';
+
+                                        const additionalCheckbox = optionElement.querySelector('.option-additional');
+                                        additionalCheckbox.checked = option.hasAdditionalText || false;
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+
+                if (!formData.exportFormBlank) {
+                    this.updateExportTemplate();
+                }
+
+                this.updatePreview();
+            }
+
+            collectFormData() {
+                const formTitle = document.getElementById('form-title').value.trim();
+                const exportTemplate = document.getElementById('export-template').value;
+                const sections = [];
+
+                document.querySelectorAll('.section-item').forEach(sectionElement => {
+                    const sectionTitle = sectionElement.querySelector('.section-title').value.trim();
+                    const questions = [];
+
+                    sectionElement.querySelectorAll('.question-item').forEach(questionElement => {
+                        const questionText = questionElement.querySelector('.question-text').value.trim();
+                        const questionType = questionElement.querySelector('.question-type').value;
+                        const questionData = {
+                            id: parseInt(questionElement.dataset.questionId),
+                            text: questionText,
+                            type: questionType
+                        };
+
+                        if (questionType === 'radio' || questionType === 'checkbox') {
+                            const options = [];
+                            questionElement.querySelectorAll('.option-item').forEach(optionElement => {
+                                const optionText = optionElement.querySelector('.option-text').value.trim();
+                                const hasAdditionalText = optionElement.querySelector('.option-additional').checked;
+
+                                if (optionText) {
+                                    const optionData = { text: optionText };
+                                    if (hasAdditionalText) {
+                                        optionData.hasAdditionalText = true;
+                                    }
+                                    options.push(optionData);
+                                }
+                            });
+
+                            if (options.length > 0) {
+                                questionData.options = options;
+                            }
+                        }
+
+                        if (questionText) {
+                            questions.push(questionData);
+                        }
+                    });
+
+                    if (sectionTitle && questions.length > 0) {
+                        sections.push({
+                            title: sectionTitle,
+                            questions: questions
+                        });
+                    }
+                });
+
+                const formData = {
+                    title: formTitle,
+                    sections: sections
+                };
+
+                if (exportTemplate.trim()) {
+                    formData.exportFormBlank = exportTemplate;
+                }
+
+                return formData;
+            }
+
+            updatePreview() {
+                const formData = this.collectFormData();
+                const jsonOutput = document.getElementById('json-output');
+                if (jsonOutput) {
+                    jsonOutput.textContent = JSON.stringify(formData, null, 2);
+                }
+            }
+
+            async saveForm() {
+                const formData = this.collectFormData();
+                const validation = this.validateForm();
+
+                if (validation.length > 0) {
+                    this.showError(messages.validationErrors + ':\n' + validation.join('\n'));
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/doctor/form/blank/new', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        this.showSuccess(messages.saveSuccess);
+                        setTimeout(() => {
+                            window.location.href = '/doctor/form/blank/list';
+                        }, 2000);
+                    } else {
+                        this.showError(messages.saveError + ': ' + (result.error || messages.unknownError));
+                    }
+                } catch (error) {
+                    this.showError(messages.saveError + ': ' + error.message);
+                }
+            }
+
+            async updateForm() {
+                const formData = this.collectFormData();
+                const validation = this.validateForm();
+
+                if (validation.length > 0) {
+                    this.showError(messages.validationErrors + ':\n' + validation.join('\n'));
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/doctor/form/blank/${window.filename}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        this.showSuccess(messages.updateSuccess);
+                        setTimeout(() => {
+                            window.location.href = '/doctor/form/blank/list';
+                        }, 2000);
+                    } else {
+                        this.showError(messages.updateError + ': ' + (result.error || messages.unknownError));
+                    }
+                } catch (error) {
+                    this.showError(messages.updateError + ': ' + error.message);
+                }
+            }
+
+            validateForm() {
+                const formData = this.collectFormData();
+                const errors = [];
+
+                if (!formData.title) {
+                    errors.push(messages.titleRequired);
+                }
+
+                if (formData.sections.length === 0) {
+                    errors.push(messages.sectionRequired);
+                }
+
+                formData.sections.forEach((section, sectionIndex) => {
+                    if (!section.title) {
+                        errors.push(`${messages.sectionLabel} ${sectionIndex + 1}: ${messages.sectionTitleRequired}`);
+                    }
+
+                    if (section.questions.length === 0) {
+                        errors.push(`${messages.sectionLabel} "${section.title}": ${messages.questionRequired}`);
+                    }
+
+                    section.questions.forEach((question, questionIndex) => {
+                        if (!question.text) {
+                            errors.push(`${messages.sectionLabel} "${section.title}", вопрос ${questionIndex + 1}: ${messages.questionTextRequired}`);
+                        }
+
+                        if ((question.type === 'radio' || question.type === 'checkbox') &&
+                            (!question.options || question.options.length === 0)) {
+                            errors.push(`${messages.sectionLabel} "${section.title}", вопрос "${question.text}": ${messages.optionsRequired}`);
+                        }
+                    });
+                });
+
+                return errors;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            window.formBuilder = new FormBuilder();
+        });
+    </script>
+</div>
+</html>

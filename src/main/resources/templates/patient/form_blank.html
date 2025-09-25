@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru"
+      th:replace="~{patient/template :: layout(title=#{patient.form.page.title}, content=~{::content})}">
+<div th:fragment="content" class="w-full max-w-6xl mx-auto px-4 sm:px-8 py-6 box-border">
+    <div class="bg-white border-2 border-gray-300 mb-6">
+        <div class="bg-blue-600 text-white px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+            <div>
+                <h1 id="form-title" class="text-xl sm:text-2xl font-bold">
+                    <span th:if="${blank_form != null and blank_form.title != null}" th:text="${blank_form.title}"></span>
+                    <span th:if="${blank_form == null or blank_form.title == null}" th:text="#{patient.form.loading}"></span>
+                </h1>
+                <p class="text-blue-100 mt-1 text-sm sm:text-base" th:text="#{patient.form.subtitle}">Заполните все поля формы</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="error-message" class="hidden bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 mb-6">
+        <div class="flex items-center">
+            <span class="text-xl mr-2">⚠️</span>
+            <span id="error-text" class="text-sm sm:text-base"></span>
+        </div>
+    </div>
+
+    <div id="loading-indicator" class="text-center py-12">
+        <div class="text-gray-500 text-base sm:text-lg" th:text="#{patient.form.loading.indicator}">⏳ Загрузка формы...</div>
+    </div>
+
+    <form id="patient-form" class="hidden space-y-6">
+        <div id="form-sections" class="space-y-6">
+        </div>
+
+        <div class="bg-gray-50 border-2 border-gray-300 px-4 sm:px-6 py-4">
+            <div class="flex justify-center">
+                <button type="submit" id="submit-btn"
+                        class="w-full sm:w-auto text-center bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-4 sm:px-6 py-3 font-medium transition-colors duration-200 text-base sm:text-lg"
+                        th:text="#{patient.form.submit.button}">
+                    📝 Отправить форму
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <script th:inline="javascript">
+        window.formData = /*[[${blank_form}]]*/ null;
+        window.filename = /*[[${filename}]]*/ '';
+    </script>
+    <script th:inline="javascript">
+        var messages = {
+            loadError: [[#{patient.form.js.error.load}]],
+        formDataNotFound: [[#{patient.form.js.error.form.data}]],
+
+        placeholderNumber: [[#{patient.form.js.placeholder.number}]],
+        placeholderText: [[#{patient.form.js.placeholder.text}]],
+        placeholderTextarea: [[#{patient.form.js.placeholder.textarea}]],
+        placeholderAdditional: [[#{patient.form.js.placeholder.additional}]],
+
+        submitButton: [[#{patient.form.js.submit.button}]],
+        submitting: [[#{patient.form.js.submitting}]],
+
+        validationHeader: [[#{patient.form.js.validation.header}]],
+        validationAdditionalRequired: [[#{patient.form.js.validation.additional.required}]],
+        validationAdditionalRequiredFor: [[#{patient.form.js.validation.additional.required.for}]],
+
+        submitError: [[#{patient.form.js.error.submit}]]
+        };
+
+        class PatientFormRenderer {
+            constructor() {
+                this.formData = null;
+                this.filename = window.filename || '';
+                this.answers = new Map();
+                this.initializeForm();
+            }
+
+            async initializeForm() {
+                try {
+                    if (window.formData) {
+                        this.formData = window.formData;
+                        this.renderForm();
+                    } else {
+                        await this.loadFormData();
+                    }
+                } catch {
+                    this.showError(messages.loadError);
+                }
+            }
+
+            async loadFormData() {
+                const res = await fetch(`/api/patient/form/blank/${this.filename}`);
+                if (!res.ok) throw new Error();
+                this.formData = await res.json();
+                this.renderForm();
+            }
+
+            renderForm() {
+                if (!this.formData) return this.showError(messages.formDataNotFound);
+
+                document.getElementById('form-title').textContent = this.formData.title;
+                document.getElementById('loading-indicator').classList.add('hidden');
+                const form = document.getElementById('patient-form');
+                form.classList.remove('hidden');
+                this.renderSections();
+                form.addEventListener('submit', e => this.handleSubmit(e));
+            }
+
+            renderSections() {
+                const container = document.getElementById('form-sections');
+                container.innerHTML = '';
+                this.formData.sections.forEach(section => {
+                    container.appendChild(this.createSection(section));
+                });
+            }
+
+            createSection(section) {
+                const div = document.createElement('div');
+                div.className = 'bg-white border-2 border-gray-300';
+
+                const header = document.createElement('div');
+                header.className = 'bg-gray-100 border-b-2 border-gray-300 px-6 py-4';
+                const h2 = document.createElement('h2');
+                h2.className = 'text-xl font-bold text-gray-800';
+                h2.textContent = section.title;
+                header.appendChild(h2);
+                div.appendChild(header);
+
+                const content = document.createElement('div');
+                content.className = 'p-6 space-y-8';
+                section.questions.forEach(question => {
+                    content.appendChild(this.createQuestion(question));
+                });
+                div.appendChild(content);
+
+                return div;
+            }
+
+            createQuestion(question) {
+                const div = document.createElement('div');
+                div.className = 'space-y-4';
+
+                const label = document.createElement('label');
+                label.className = 'block text-lg font-medium text-gray-800';
+                label.textContent = question.text;
+                div.appendChild(label);
+
+                const answerElement = this.createAnswerElement(question);
+                div.appendChild(answerElement);
+
+                return div;
+            }
+
+            createAnswerElement(question) {
+                switch (question.type) {
+                    case 'textarea':
+                        return this.createTextarea(question);
+                    case 'number':
+                        return this.createInput(question, 'number', messages.placeholderNumber);
+                    case 'radio':
+                        return this.createRadioGroup(question);
+                    case 'checkbox':
+                        return this.createCheckboxGroup(question);
+                    default:
+                        return this.createInput(question, 'text', messages.placeholderText);
+                }
+            }
+
+            createInput(question, type, placeholder) {
+                const input = document.createElement('input');
+                input.type = type;
+                input.id = `q${question.id}`;
+                input.name = input.id;
+                input.placeholder = placeholder;
+                input.required = true;
+                input.autocomplete = "off";
+                input.autocapitalize = "off";
+                input.spellcheck = false;
+                input.className = 'w-full border-2 border-gray-300 px-4 py-3 text-lg bg-white focus:outline-none focus:border-blue-500 transition-colors duration-200';
+
+                input.addEventListener('input', () => {
+                    this.answers.set(question.id, input.value);
+                });
+
+                return input;
+            }
+
+            createTextarea(question) {
+                const textarea = document.createElement('textarea');
+                textarea.id = `q${question.id}`;
+                textarea.name = textarea.id;
+                textarea.rows = 4;
+                textarea.placeholder = messages.placeholderTextarea;
+                textarea.required = true;
+                textarea.className = 'w-full border-2 border-gray-300 px-4 py-3 text-lg bg-white focus:outline-none focus:border-blue-500 transition-colors duration-200 resize-vertical';
+
+                textarea.addEventListener('input', () => {
+                    this.answers.set(question.id, textarea.value);
+                });
+
+                return textarea;
+            }
+
+            createRadioGroup(question) {
+                const container = document.createElement('div');
+                container.className = 'space-y-4';
+
+                question.options.forEach((option, index) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'space-y-2';
+
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center space-x-3';
+
+                    const input = document.createElement('input');
+                    input.type = 'radio';
+                    input.id = `q${question.id}o${index}`;
+                    input.name = `q${question.id}`;
+                    input.value = option.value || option.text;
+                    input.required = true;
+                    input.autocomplete = "off";
+                    input.autocapitalize = "off";
+                    input.spellcheck = false;
+                    input.className = 'h-5 w-5 text-blue-600 border-2 border-gray-300 focus:ring-blue-500';
+
+                    const label = document.createElement('label');
+                    label.htmlFor = input.id;
+                    label.className = 'text-lg text-gray-700 cursor-pointer';
+                    label.textContent = option.text;
+
+                    row.append(input, label);
+                    wrapper.appendChild(row);
+
+                    let extraInput = null;
+                    if (option.hasAdditionalText) {
+                        extraInput = document.createElement('input');
+                        extraInput.type = 'text';
+                        extraInput.placeholder = messages.placeholderAdditional;
+                        extraInput.className = 'w-full border-2 border-gray-300 px-4 py-3 text-lg bg-white focus:outline-none focus:border-blue-500 transition-colors duration-200';
+                        extraInput.style.display = 'none';
+                        extraInput.autocomplete = "off";
+                        extraInput.autocapitalize = "off";
+                        extraInput.spellcheck = false;
+                        extraInput.required = false;
+                        wrapper.appendChild(extraInput);
+
+                        extraInput.addEventListener('input', () => {
+                            if (input.checked) {
+                                this.answers.set(question.id, {
+                                    value: input.value,
+                                    additionalText: extraInput.value
+                                });
+                            }
+                        });
+                    }
+
+                    input.addEventListener('change', () => {
+                        if (input.checked) {
+                            container.querySelectorAll('input[type="text"]').forEach(field => {
+                                field.style.display = 'none';
+                                field.required = false;
+                                field.value = '';
+                            });
+
+                            if (option.hasAdditionalText && extraInput) {
+                                extraInput.style.display = 'block';
+                                extraInput.required = true;
+                                extraInput.autocomplete = "off";
+                                extraInput.autocapitalize = "off";
+                                extraInput.spellcheck = false;
+
+                                this.answers.set(question.id, {
+                                    value: input.value,
+                                    additionalText: extraInput.value
+                                });
+                            } else {
+                                this.answers.set(question.id, input.value);
+                            }
+                        }
+                    });
+
+                    container.appendChild(wrapper);
+                });
+
+                return container;
+            }
+
+            createCheckboxGroup(question) {
+                const container = document.createElement('div');
+                container.className = 'space-y-4';
+                const selectedValues = new Map();
+
+                question.options.forEach((option, index) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'space-y-2';
+
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center space-x-3';
+
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.id = `q${question.id}c${index}`;
+                    input.value = option.value || option.text;
+                    input.autocomplete = "off";
+                    input.autocapitalize = "off";
+                    input.spellcheck = false;
+                    input.className = 'h-5 w-5 text-blue-600 border-2 border-gray-300 focus:ring-blue-500';
+
+                    const label = document.createElement('label');
+                    label.htmlFor = input.id;
+                    label.className = 'text-lg text-gray-700 cursor-pointer';
+                    label.textContent = option.text;
+
+                    row.append(input, label);
+                    wrapper.appendChild(row);
+
+                    let extraInput = null;
+                    if (option.hasAdditionalText) {
+                        extraInput = document.createElement('input');
+                        extraInput.type = 'text';
+                        extraInput.autocomplete = "off";
+                        extraInput.autocapitalize = "off";
+                        extraInput.spellcheck = false;
+                        extraInput.placeholder = messages.placeholderAdditional;
+                        extraInput.className = 'w-full border-2 border-gray-300 px-4 py-3 text-lg bg-white focus:outline-none focus:border-blue-500 transition-colors duration-200';
+                        extraInput.style.display = 'none';
+                        wrapper.appendChild(extraInput);
+
+                        extraInput.addEventListener('input', () => {
+                            selectedValues.set(input.value, extraInput.value);
+                            this.updateCheckboxAnswer(question.id, selectedValues);
+                        });
+                    }
+
+                    input.addEventListener('change', () => {
+                        if (input.checked) {
+                            selectedValues.set(input.value, extraInput ? extraInput.value : null);
+                            if (extraInput) extraInput.style.display = 'block';
+                        } else {
+                            selectedValues.delete(input.value);
+                            if (extraInput) {
+                                extraInput.style.display = 'none';
+                                extraInput.value = '';
+                                extraInput.autocomplete = "off";
+                                extraInput.autocapitalize = "off";
+                                extraInput.spellcheck = false;
+                            }
+                        }
+                        this.updateCheckboxAnswer(question.id, selectedValues);
+                    });
+
+                    container.appendChild(wrapper);
+                });
+
+                return container;
+            }
+
+            updateCheckboxAnswer(questionId, selectedValues) {
+                if (selectedValues.size === 0) {
+                    this.answers.delete(questionId);
+                    return;
+                }
+
+                const values = [];
+                const additionalTexts = new Map();
+
+                selectedValues.forEach((extraText, value) => {
+                    values.push(value);
+                    if (extraText) {
+                        additionalTexts.set(value, extraText);
+                    }
+                });
+
+                this.answers.set(questionId, {
+                    value: values.join(', '),
+                    additionalText: additionalTexts.size > 0 ? Object.fromEntries(additionalTexts) : null,
+                    selectedValues: values
+                });
+            }
+
+            validate() {
+                const unanswered = [];
+
+                this.formData.sections.forEach(section => {
+                    section.questions.forEach(question => {
+                        const answer = this.answers.get(question.id);
+
+                        if (['text', 'number', 'textarea'].includes(question.type)) {
+                            if (!answer || answer.trim() === '') {
+                                unanswered.push(question.text);
+                            }
+                            return;
+                        }
+
+                        if (question.type === 'radio') {
+                            if (!answer) {
+                                unanswered.push(question.text);
+                                return;
+                            }
+
+                            const answerValue = typeof answer === 'string' ? answer : answer.value;
+
+                            if (!answerValue || answerValue.trim() === '') {
+                                unanswered.push(question.text);
+                                return;
+                            }
+
+                            const opt = question.options.find(o => (o.value || o.text) === answerValue);
+                            if (opt?.hasAdditionalText) {
+                                const additionalText = typeof answer === 'object' ? answer.additionalText : null;
+                                if (!additionalText || additionalText.trim() === '') {
+                                    unanswered.push(`${question.text} - ${messages.validationAdditionalRequired}`);
+                                }
+                            }
+                            return;
+                        }
+
+                        if (question.type === 'checkbox') {
+                            if (!answer || !answer.selectedValues || answer.selectedValues.length === 0) {
+                                unanswered.push(question.text);
+                                return;
+                            }
+
+                            if (answer.additionalText) {
+                                question.options.forEach(opt => {
+                                    if (opt.hasAdditionalText && answer.selectedValues.includes(opt.value || opt.text)) {
+                                        const extraText = answer.additionalText[opt.value || opt.text];
+                                        if (!extraText || extraText.trim() === '') {
+                                            unanswered.push(`${question.text} - ${messages.validationAdditionalRequiredFor} "${opt.text}"`);
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    });
+                });
+
+                if (unanswered.length > 0) {
+                    this.showError(`${messages.validationHeader}:\n• ${unanswered.join('\n• ')}`);
+                    return false;
+                }
+
+                return true;
+            }
+
+            async handleSubmit(e) {
+                e.preventDefault();
+                if (!this.validate()) return;
+
+                const data = Array.from(this.answers.entries()).map(([id, ans]) => {
+                    if (typeof ans === 'string') {
+                        return { questionId: id, value: ans };
+                    }
+
+                    if (ans.additionalText && typeof ans.additionalText === 'object') {
+                        const valuesWithExtra = [];
+                        ans.selectedValues.forEach(val => {
+                            const extra = ans.additionalText[val];
+                            valuesWithExtra.push(extra ? `${val}: ${extra}` : val);
+                        });
+                        return { questionId: id, value: valuesWithExtra.join(', ') };
+                    }
+
+                    if (ans.additionalText && typeof ans.additionalText === 'string') {
+                        return { questionId: id, value: `${ans.value}: ${ans.additionalText}` };
+                    }
+
+                    return { questionId: id, value: ans.value };
+                });
+
+                await this.submit(data);
+            }
+
+            async submit(data) {
+                const btn = document.getElementById('submit-btn');
+                const form = document.getElementById('patient-form');
+                btn.disabled = true;
+                btn.textContent = messages.submitting;
+                btn.className = 'bg-gray-400 cursor-not-allowed text-white px-6 py-3 font-medium transition-colors duration-200';
+                form.classList.add('opacity-60', 'pointer-events-none');
+
+                try {
+                    const res = await fetch(`/api/patient/form/blank/${this.filename}/submit`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+
+                    const resJ = await res.json();
+                    if (res.ok && resJ.success === 'true') {
+                        window.location.href = `/patient/thanks?completedFormLink=/doctor/form/completed/${resJ.responseId}`;
+                    } else {
+                        throw new Error(resJ.error || 'Ошибка');
+                    }
+                } catch (err) {
+                    this.showError(`${messages.submitError}: ${err.message}`);
+                    btn.disabled = false;
+                    btn.textContent = messages.submitButton;
+                    btn.className = 'bg-green-500 hover:bg-green-600 text-white px-6 py-3 font-medium transition-colors duration-200';
+                    form.classList.remove('opacity-60', 'pointer-events-none');
+                }
+            }
+
+            showError(message) {
+                const errorDiv = document.getElementById('error-message');
+                const errorText = document.getElementById('error-text');
+
+                errorText.textContent = message;
+                errorDiv.classList.remove('hidden');
+                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                setTimeout(() => {
+                    errorDiv.classList.add('hidden');
+                }, 10000);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new PatientFormRenderer();
+        });
+    </script>
+</div>
+</html>

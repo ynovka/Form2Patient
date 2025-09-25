@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru"
+      th:replace="~{doctor/template :: layout(title=#{doctor.settings.page.title}, content=~{::content})}">
+<div th:fragment="content" class="w-full max-w-6xl mx-auto px-0 py-6 flex-1 6xl:box-content">
+    <div class="bg-white border border-gray-200 min-h-[60vh] shadow-sm">
+        <div class="px-4 sm:px-8 py-6 border-b border-gray-200">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-800" th:text="#{doctor.settings.title}">Настройки системы</h1>
+                    <p class="text-gray-600 mt-2 text-sm sm:text-base" th:text="#{doctor.settings.subtitle}">Управление паролями доступа к системе</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-4 sm:px-8 py-6">
+            <div id="successAlert" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 mb-4 sm:mb-6">
+                <div class="flex items-start">
+                    <span class="text-xl mr-2 flex-shrink-0">✅</span>
+                    <span id="successText" class="text-sm sm:text-base"></span>
+                </div>
+            </div>
+
+            <div id="errorAlert" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 mb-4 sm:mb-6">
+                <div class="flex items-start">
+                    <span class="text-xl mr-2 flex-shrink-0">⚠️</span>
+                    <span id="errorText" class="text-sm sm:text-base"></span>
+                </div>
+            </div>
+
+            <div class="space-y-6 sm:space-y-8">
+                <div>
+                    <h2 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4 sm:mb-6 pb-2 border-b border-gray-200" th:text="#{doctor.settings.passwords.title}">Пароли доступа</h2>
+
+                    <form id="passwordForm" class="space-y-4 sm:space-y-6">
+                        <div class="space-y-2">
+                            <label for="adminPassword" class="block text-sm sm:text-base font-medium text-gray-700" th:text="#{doctor.settings.admin.password.label}">
+                                Пароль администратора:
+                            </label>
+                            <input type="password"
+                                   id="adminPassword"
+                                   name="adminPassword"
+                                   th:value="${adminPassword}"
+                                   required
+                                   class="w-full border-2 border-gray-300 px-3 sm:px-4 py-3 text-base focus:outline-none focus:border-blue-500 transition-colors duration-200 touch-manipulation">
+                            <div id="adminStrength" class="text-xs sm:text-sm mt-1"></div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="clientPassword" class="block text-sm sm:text-base font-medium text-gray-700" th:text="#{doctor.settings.client.password.label}">
+                                Пароль клиента:
+                            </label>
+                            <input type="password"
+                                   id="clientPassword"
+                                   name="clientPassword"
+                                   th:value="${clientPassword}"
+                                   required
+                                   class="w-full border-2 border-gray-300 px-3 sm:px-4 py-3 text-base focus:outline-none focus:border-blue-500 transition-colors duration-200 touch-manipulation">
+                            <div id="clientStrength" class="text-xs sm:text-sm mt-1"></div>
+                        </div>
+
+                        <div class="pt-4 sm:pt-6">
+                            <button type="submit"
+                                    id="saveBtn"
+                                    class="w-full sm:w-auto bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-6 sm:px-8 py-3 text-base sm:text-lg font-medium transition-colors duration-200 cursor-pointer touch-manipulation"
+                                    th:text="#{doctor.settings.save.button}">
+                                Сохранить пароли
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        var messages = {
+            tooShort: [[#{doctor.settings.js.password.too.short}]],
+        medium: [[#{doctor.settings.js.password.medium}]],
+        strong: [[#{doctor.settings.js.password.strong}]],
+        weak: [[#{doctor.settings.js.password.weak}]],
+        saving: [[#{doctor.settings.js.saving}]],
+        saveButton: [[#{doctor.settings.js.save.button}]],
+        saveSuccess: [[#{doctor.settings.js.save.success}]],
+        saveError: [[#{doctor.settings.js.save.error}]],
+        requestError: [[#{doctor.settings.js.request.error}]]
+        };
+
+        function checkPasswordStrength(password) {
+            if (password.length < 4) return { strength: 'weak', text: messages.tooShort };
+            if (password.length < 8) return { strength: 'medium', text: messages.medium };
+
+            const hasNumbers = /\d/.test(password);
+            const hasLetters = /[a-zA-Z]/.test(password);
+            const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+            const complexity = [hasNumbers, hasLetters, hasSpecial].filter(Boolean).length;
+
+            if (complexity >= 2 && password.length >= 8) {
+                return { strength: 'strong', text: messages.strong };
+            } else if (complexity >= 1) {
+                return { strength: 'medium', text: messages.medium };
+            }
+
+            return { strength: 'weak', text: messages.weak };
+        }
+
+        function updatePasswordStrength(inputId, strengthId) {
+            const input = document.getElementById(inputId);
+            const strengthDiv = document.getElementById(strengthId);
+
+            input.addEventListener('input', function() {
+                const result = checkPasswordStrength(this.value);
+                strengthDiv.textContent = result.text;
+
+                strengthDiv.classList.remove('text-red-600', 'text-yellow-600', 'text-green-600');
+
+                if (result.strength === 'weak') {
+                    strengthDiv.classList.add('text-red-600');
+                } else if (result.strength === 'medium') {
+                    strengthDiv.classList.add('text-yellow-600');
+                } else {
+                    strengthDiv.classList.add('text-green-600');
+                }
+            });
+        }
+
+        updatePasswordStrength('adminPassword', 'adminStrength');
+        updatePasswordStrength('clientPassword', 'clientStrength');
+
+        document.getElementById('passwordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const saveBtn = document.getElementById('saveBtn');
+            const successAlert = document.getElementById('successAlert');
+            const errorAlert = document.getElementById('errorAlert');
+            const successText = document.getElementById('successText');
+            const errorText = document.getElementById('errorText');
+
+            successAlert.classList.add('hidden');
+            errorAlert.classList.add('hidden');
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = messages.saving;
+            saveBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+            saveBtn.classList.remove('bg-green-500', 'hover:bg-green-600', 'active:bg-green-700');
+
+            try {
+                const response = await fetch('/api/doctor/settings/passwords', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success === 'true') {
+                    successText.textContent = result.message || messages.saveSuccess;
+                    successAlert.classList.remove('hidden');
+                    successAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    errorText.textContent = result.error || messages.saveError;
+                    errorAlert.classList.remove('hidden');
+                    errorAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            } catch (error) {
+                errorText.textContent = messages.requestError;
+                errorAlert.classList.remove('hidden');
+                errorAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = messages.saveButton;
+                saveBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                saveBtn.classList.add('bg-green-500', 'hover:bg-green-600', 'active:bg-green-700');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const adminInput = document.getElementById('adminPassword');
+            const clientInput = document.getElementById('clientPassword');
+
+            function initPasswordStrength(input, strengthElementId) {
+                if (input.value) {
+                    const result = checkPasswordStrength(input.value);
+                    const strengthElement = document.getElementById(strengthElementId);
+                    strengthElement.textContent = result.text;
+
+                    if (result.strength === 'weak') {
+                        strengthElement.classList.add('text-red-600');
+                    } else if (result.strength === 'medium') {
+                        strengthElement.classList.add('text-yellow-600');
+                    } else {
+                        strengthElement.classList.add('text-green-600');
+                    }
+                }
+            }
+
+            initPasswordStrength(adminInput, 'adminStrength');
+            initPasswordStrength(clientInput, 'clientStrength');
+        });
+    </script>
+</div>
+</html>

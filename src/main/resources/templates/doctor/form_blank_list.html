@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru"
+      th:replace="~{doctor/template :: layout(title=#{doctor.blank.forms.page.title}, content=~{::content})}">
+<div th:fragment="content" class="w-full max-w-6xl mx-auto px-0 py-6 flex-1 6xl:box-content">
+    <div class="bg-white border border-gray-200 min-h-[60vh] shadow-sm">
+        <div class="px-4 sm:px-8 py-6 border-b border-gray-200">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800" th:text="#{doctor.blank.forms.title}">Шаблоны форм</h1>
+            <p class="text-gray-600 mt-2 text-sm sm:text-base" th:text="#{doctor.blank.forms.subtitle}">Управляйте вашими медицинскими формами</p>
+        </div>
+
+        <div class="px-4 sm:px-8 py-6">
+            <div th:if="${#lists.isEmpty(blank_forms)}" class="flex flex-col items-center justify-center py-12 sm:py-20 text-center">
+                <div class="mb-6 sm:mb-8">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="60px" viewBox="0 -960 960 960" width="60px" class="mx-auto fill-gray-700 sm:h-20 sm:w-20">
+                        <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h168q13-36 43.5-58t68.5-22q38 0 68.5 22t43.5 58h168q33 0 56.5 23.5T840-760v268q-19-9-39-15.5t-41-9.5v-243H200v560h242q3 22 9.5 42t15.5 38H200Zm0-120v40-560 243-3 280Zm80-40h163q3-21 9.5-41t14.5-39H280v80Zm0-160h244q32-30 71.5-50t84.5-27v-3H280v80Zm0-160h400v-80H280v80Zm200-190q13 0 21.5-8.5T510-820q0-13-8.5-21.5T480-850q-13 0-21.5 8.5T450-820q0 13 8.5 21.5T480-790ZM720-40q-83 0-141.5-58.5T520-240q0-83 58.5-141.5T720-440q83 0 141.5 58.5T920-240q0 83-58.5 141.5T720-40Zm-20-80h40v-100h100v-40H740v-100h-40v100H600v40h100v100Z"/>
+                    </svg>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-semibold text-gray-700 mb-3 sm:mb-4" th:text="#{doctor.blank.forms.empty.title}">Нет шаблонов форм</h2>
+                <p class="text-gray-500 mb-6 sm:mb-8 max-w-md text-sm sm:text-base" th:text="#{doctor.blank.forms.empty.description}">У вас пока нет созданных шаблонов. Создайте первый шаблон для начала работы.</p>
+                <button onclick="location.href=`/doctor/form/blank/create`"
+                        class="bg-blue-500 text-white px-6 sm:px-8 py-3 text-base sm:text-lg font-medium hover:bg-blue-600 active:bg-blue-700 transition-colors duration-200 cursor-pointer touch-manipulation"
+                        th:text="#{doctor.blank.forms.empty.button}">
+                    Создать первую
+                </button>
+            </div>
+
+            <div th:if="${!#lists.isEmpty(blank_forms)}" class="space-y-4">
+                <div th:each="form : ${blank_forms}"
+                     class="bg-white border border-gray-200 p-4 sm:p-6 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors duration-200 touch-manipulation"
+                     th:attr="data-href='/doctor/form/blank/' + ${form.filename}">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1 min-w-0 pr-3">
+                            <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-2 sm:mb-3 truncate" th:text="${form.title}">[[#{doctor.blank.forms.form.title.placeholder}]]</h3>
+                            <div class="space-y-1 sm:space-y-2">
+                                <p class="text-xs sm:text-sm text-gray-600">
+                                    <span class="font-medium" th:text="#{doctor.blank.forms.form.file.label}">Файл:</span>
+                                    <span th:text="${form.filename}" class="text-gray-700 break-all">[[#{doctor.blank.forms.form.filename.placeholder}]]</span>
+                                </p>
+                                <p class="text-xs sm:text-sm text-gray-600">
+                                    <span class="font-medium" th:text="#{doctor.blank.forms.form.created.label}">Создана:</span>
+                                    <span th:text="${form.getFormattedDate()}" class="text-gray-700">[[#{doctor.blank.forms.form.date.placeholder}]]</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0 self-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#9ca3af" class="transform group-hover:translate-x-1 transition-transform duration-200 sm:h-6 sm:w-6">
+                                <path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    document.addEventListener("DOMContentLoaded", function () {
+                        document.querySelectorAll('[data-href]').forEach(el => {
+                            el.addEventListener('click', () => {
+                                window.location.href = el.dataset.href;
+                            });
+                        });
+                    });
+                </script>
+
+                <div class="pt-4 sm:pt-6">
+                    <button class="w-full border-2 border-dashed border-gray-300 bg-gray-50 text-gray-600 py-6 sm:py-8 hover:border-gray-400 hover:bg-gray-100 hover:text-gray-700 active:bg-gray-200 transition-all duration-200 cursor-pointer touch-manipulation">
+                        <div onclick="location.href=`/doctor/form/blank/create`"
+                             class="flex flex-col items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="28px" viewBox="0 -960 960 960" width="28px" fill="currentColor" class="mb-2 sm:h-8 sm:w-8">
+                                <path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/>
+                            </svg>
+                            <span class="text-base sm:text-lg font-medium" th:text="#{doctor.blank.forms.add.button}">Добавить новый шаблон</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</html>

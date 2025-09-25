@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru"
+      th:replace="~{patient/template :: layout(title=#{patient.thanks.page.title}, content=~{::content})}">
+<div th:fragment="content" class="w-full max-w-2xl mx-auto 3xs:mx-4 px-6 py-16 flex flex-col items-center bg-white border border-gray-300">
+
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-green-600 mb-6" fill="none"
+         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M5 13l4 4L19 7"/>
+    </svg>
+
+    <h1 id="thank-text"
+        class="text-2xl text-gray-800 font-medium text-center cursor-pointer select-none hover:text-green-700"
+        th:text="#{patient.thanks.message}">
+        Спасибо за заполнение анкеты
+    </h1>
+
+    <div id="redirect-data" th:data-link="${completed_form_link}"></div>
+
+    <script>
+        const thankText = document.getElementById('thank-text');
+        let lastClick = 0;
+
+        thankText.addEventListener('click', () => {
+            const now = Date.now();
+            if (now - lastClick < 300) {
+                const link = document.getElementById('redirect-data').dataset.link;
+                if (link) {
+                    window.location.href = link;
+                }
+            }
+            lastClick = now;
+        });
+    </script>
+</div>
+</html>
